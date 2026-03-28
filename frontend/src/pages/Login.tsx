@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiLogin, apiRegister } from "../lib/api";
-import { login } from "../lib/auth";
+import { login, signInWithGoogle, signInWithGithub, syncSupabaseSession } from "../lib/auth";
+import { useEffect } from "react";
 
 const IconGoogle = (props: React.SVGProps<SVGSVGElement>) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" {...props}>
@@ -31,7 +32,23 @@ const Login = () => {
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isGithubLoading, setIsGithubLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    // Check if we just redirected back from an OAuth provider
+    const checkSession = async () => {
+      try {
+        const synced = await syncSupabaseSession();
+        if (synced) {
+          navigate("/dashboard");
+        }
+      } catch (err: any) {
+        console.error("Session sync failed:", err);
+      }
+    };
+    checkSession();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,9 +73,26 @@ const Login = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    // Google login not actually implemented in backend yet, keep as dummy or show alert
-    alert("Google Login is coming soon!");
+  const handleGoogleLogin = async () => {
+    setIsGoogleLoading(true);
+    setError("");
+    try {
+      await signInWithGoogle();
+    } catch (err: any) {
+      setError(err.message || "Google login initialization failed.");
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setIsGithubLoading(true);
+    setError("");
+    try {
+      await signInWithGithub();
+    } catch (err: any) {
+      setError(err.message || "GitHub login initialization failed.");
+      setIsGithubLoading(false);
+    }
   };
 
   return (
@@ -111,9 +145,11 @@ const Login = () => {
               <Button
                 variant="outline"
                 className="gap-2 btn-hover"
-                disabled={true}
+                disabled={isGithubLoading || isLoading || isGoogleLoading}
+                onClick={handleGithubLogin}
               >
-                <IconGithub /> GitHub
+                {isGithubLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <IconGithub />}
+                GitHub
               </Button>
             </div>
 
