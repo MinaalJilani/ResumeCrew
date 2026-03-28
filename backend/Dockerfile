@@ -7,7 +7,7 @@ WORKDIR /app
 # Install dependencies (using uv for speed)
 COPY requirements.txt requirements.txt
 RUN pip install --no-cache-dir uv
-RUN uv pip install --system --no-cache -r requirements.txt
+RUN uv pip install --system --no-cache --index-strategy unsafe-best-match -r requirements.txt
 
 # Copy all backend source files
 COPY . .
