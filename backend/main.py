@@ -258,6 +258,8 @@ async def chat(body: ChatRequest, user_id: str = Depends(get_current_user)):
             job_id,
         )
 
+        job_results[job_id]["user_id"] = user_id
+
         return ChatResponse(
             type="crew_started",
             job_id=job_id,
@@ -279,18 +281,27 @@ async def chat(body: ChatRequest, user_id: str = Depends(get_current_user)):
 # ── Crew results polling ─────────────────────────────────────────────────────
 
 @app.get("/results/{job_id}")
-async def get_results(job_id: str):
+async def get_results(job_id: str, user_id: str = Depends(get_current_user)):
     if job_id not in job_results:
         raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Ownership check
+    if job_results[job_id].get("user_id") != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden: You do not own this job")
+        
     return job_results[job_id]
 
 
 # ── Crew logs SSE stream ─────────────────────────────────────────────────────
 
 @app.get("/stream/{job_id}")
-async def stream_logs(job_id: str):
+async def stream_logs(job_id: str, user_id: str = Depends(get_current_user)):
     if job_id not in job_results:
         raise HTTPException(status_code=404, detail="Job not found")
+
+    # Ownership check
+    if job_results[job_id].get("user_id") != user_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
     async def event_generator():
         sent = 0

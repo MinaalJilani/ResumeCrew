@@ -32,16 +32,25 @@ type ChatSession = {
 let msgCounter = 0;
 function newId() { return `msg-${Date.now()}-${++msgCounter}`; }
 
-const STORAGE_KEY = "resumecrew_sessions";
-const ACTIVE_KEY = "resumecrew_active_session";
+function getStorageKeys(userId: string | null) {
+  const suffix = userId ? `_${userId}` : "";
+  return {
+    SESSIONS: `resumecrew_sessions${suffix}`,
+    ACTIVE: `resumecrew_active_session${suffix}`,
+  };
+}
 
-function loadSessions(): ChatSession[] {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
+function loadSessions(userId: string | null): ChatSession[] {
+  if (!userId) return [];
+  const { SESSIONS } = getStorageKeys(userId);
+  try { return JSON.parse(localStorage.getItem(SESSIONS) || "[]"); }
   catch { return []; }
 }
 
-function saveSessions(sessions: ChatSession[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+function saveSessions(userId: string | null, sessions: ChatSession[]) {
+  if (!userId) return;
+  const { SESSIONS } = getStorageKeys(userId);
+  localStorage.setItem(SESSIONS, JSON.stringify(sessions));
 }
 
 function createNewSession(): ChatSession {
@@ -66,23 +75,54 @@ function createNewSession(): ChatSession {
 export default function ChatPage() {
   const navigate = useNavigate();
 
-  // Load sessions from localStorage
-  const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    const saved = loadSessions();
-    if (saved.length === 0) {
-      const first = createNewSession();
-      saveSessions([first]);
-      return [first];
-    }
-    return saved;
-  });
+  const [userId, setUserId] = useState<string | null>(localStorage.getItem("user_id"));
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeId, setActiveId] = useState<string>("");
 
-  const [activeId, setActiveId] = useState<string>(() => {
-    const saved = localStorage.getItem(ACTIVE_KEY);
-    const sessions = loadSessions();
-    if (saved && sessions.find(s => s.id === saved)) return saved;
-    return sessions[0]?.id || "";
-  });
+  // Sync userId from localStorage and handle initial load
+  useEffect(() => {
+    const currentId = localStorage.getItem("user_id");
+    setUserId(currentId);
+    
+    if (currentId) {
+      const savedSessions = loadSessions(currentId);
+      if (savedSessions.length === 0) {
+        const first = createNewSession();
+        saveSessions(currentId, [first]);
+        setSessions([first]);
+        setActiveId(first.id);
+      } else {
+        setSessions(savedSessions);
+        const savedActive = localStorage.getItem(getStorageKeys(currentId).ACTIVE);
+        if (savedActive && savedSessions.find(s => s.id === savedActive)) {
+          setActiveId(savedActive);
+        } else {
+          setActiveId(savedSessions[0]?.id || "");
+        }
+      }
+    } else {
+      setSessions([]);
+      setActiveId("");
+    }
+  }, []);
+
+  // Listen for login/logout (storage events)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const newId = localStorage.getItem("user_id");
+      if (newId !== userId) {
+        setUserId(newId);
+        if (newId) {
+          const saved = loadSessions(newId);
+          setSessions(saved.length > 0 ? saved : [createNewSession()]);
+        } else {
+          setSessions([]);
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [userId]);
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -102,7 +142,11 @@ export default function ChatPage() {
 
   useEffect(() => { if (!isLoggedIn()) navigate("/login"); }, [navigate]);
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-  useEffect(() => { localStorage.setItem(ACTIVE_KEY, activeId); }, [activeId]);
+  useEffect(() => { 
+    if (userId && activeId) {
+      localStorage.setItem(getStorageKeys(userId).ACTIVE, activeId); 
+    }
+  }, [activeId, userId]);
 
   // Update messages for active session and persist
   const updateMessages = useCallback((updater: (prev: Message[]) => Message[]) => {
@@ -110,10 +154,10 @@ export default function ChatPage() {
       const updated = prev.map(s =>
         s.id === activeId ? { ...s, messages: updater(s.messages) } : s
       );
-      saveSessions(updated);
+      saveSessions(userId, updated);
       return updated;
     });
-  }, [activeId]);
+  }, [activeId, userId]);
 
   // Update session title using Groq AI (background, non-blocking)
   const updateTitle = useCallback(async (text: string) => {
@@ -123,7 +167,7 @@ export default function ChatPage() {
         const updated = prev.map(s =>
           s.id === activeId && s.title === "New Chat" ? { ...s, title } : s
         );
-        saveSessions(updated);
+        saveSessions(userId, updated);
         return updated;
       });
     } catch {
@@ -133,17 +177,17 @@ export default function ChatPage() {
         const updated = prev.map(s =>
           s.id === activeId && s.title === "New Chat" ? { ...s, title } : s
         );
-        saveSessions(updated);
+        saveSessions(userId, updated);
         return updated;
       });
     }
-  }, [activeId]);
+  }, [activeId, userId]);
 
   function handleNewChat() {
     const session = createNewSession();
     setSessions(prev => {
       const updated = [session, ...prev];
-      saveSessions(updated);
+      saveSessions(userId, updated);
       return updated;
     });
     setActiveId(session.id);
@@ -155,11 +199,11 @@ export default function ChatPage() {
       const updated = prev.filter(s => s.id !== id);
       if (updated.length === 0) {
         const fresh = createNewSession();
-        saveSessions([fresh]);
+        saveSessions(userId, [fresh]);
         setActiveId(fresh.id);
         return [fresh];
       }
-      saveSessions(updated);
+      saveSessions(userId, updated);
       if (id === activeId) setActiveId(updated[0].id);
       return updated;
     });
