@@ -1,9 +1,9 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Copy, Check, FileText, Mail, Search, Mic, AlertCircle, ClipboardList, Download, Loader2 } from "lucide-react";
-import { API_BASE } from "../lib/api";
-import { getToken } from "../lib/auth";
-import { loadLinks, formatLinksForResume } from "../lib/links";
+import { Copy, Check, FileText, Mail, Search, Mic, AlertCircle, ClipboardList, Download, Loader2, Sparkles } from "lucide-react";
+import { API_BASE } from "@/lib/api";
+import { getToken } from "@/lib/auth";
+import { loadLinks, formatLinksForResume } from "@/lib/links";
 
 type Props = {
   results: Record<string, string>;
@@ -54,7 +54,10 @@ export default function ResultTabs({ results }: Props) {
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail || "Download failed");
+        const detail = typeof err.detail === 'string' 
+          ? err.detail 
+          : JSON.stringify(err.detail) || "Download failed";
+        throw new Error(detail);
       }
 
       // Trigger browser download
@@ -68,67 +71,79 @@ export default function ResultTabs({ results }: Props) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(`Download failed: ${err.message}`);
+      console.error("Download error:", err);
+      alert(`Download failed: ${err.message || "Unknown error"}`);
     } finally {
       setDownloading(false);
     }
   }
 
   return (
-    <div className="mt-3 slide-up">
-      <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+    <div className="mt-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="glass border-border/50 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl">
         {/* Tab headers */}
-        <div className="flex border-b overflow-x-auto bg-gray-50">
+        <div className="flex border-b border-border/50 overflow-x-auto bg-muted/30 scrollbar-hide">
           {tabs.map((tab) => {
             const config = TAB_CONFIG[tab] || { label: tab, icon: null };
+            const active = activeTab === tab;
             return (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium whitespace-nowrap transition border-b-2 ${
-                  activeTab === tab
-                    ? "text-blue-600 border-blue-600 bg-white"
-                    : "text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-100"
+                className={`flex items-center gap-2 px-6 py-4 text-sm font-bold whitespace-nowrap transition-all relative ${
+                  active
+                    ? "text-primary active-tab-indicator"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                 }`}
               >
-                {config.icon}
+                {config.icon && <span className={active ? "text-primary" : "opacity-70"}>{config.icon}</span>}
                 {config.label}
+                {active && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_10px_rgba(20,184,166,0.8)]" />
+                )}
               </button>
             );
           })}
         </div>
 
         {/* Tab content */}
-        <div className="p-4">
-          <div className="flex justify-end items-center gap-2 mb-2">
-            {/* Download DOCX — only on resume tab */}
-            {activeTab === "resume" && results["resume"] && (
+        <div className="p-6">
+          <div className="flex justify-between items-center gap-4 mb-6">
+            <h3 className="font-display font-bold text-sm tracking-wider uppercase opacity-50 flex items-center gap-2">
+              {activeTab === 'resume' && <Sparkles className="w-3.5 h-3.5 text-primary" />}
+              {TAB_CONFIG[activeTab]?.label || activeTab} Output
+            </h3>
+            
+            <div className="flex items-center gap-2">
               <button
-                onClick={downloadDocx}
-                disabled={downloading}
-                className="flex items-center gap-1.5 text-xs text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition px-3 py-1.5 rounded-lg font-medium"
+                onClick={copyToClipboard}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-all px-3 py-1.5 rounded-lg border border-border/50 hover:border-primary/30 hover:bg-primary/5 btn-hover"
               >
-                {downloading ? (
-                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                {copied ? (
+                  <><Check className="w-3.5 h-3.5" /> Copied!</>
                 ) : (
-                  <><Download className="w-3.5 h-3.5" /> Download DOCX</>
+                  <><Copy className="w-3.5 h-3.5" /> Copy Text</>
                 )}
               </button>
-            )}
 
-            <button
-              onClick={copyToClipboard}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-blue-600 transition px-2 py-1 rounded hover:bg-blue-50"
-            >
-              {copied ? (
-                <><Check className="w-3.5 h-3.5" /> Copied!</>
-              ) : (
-                <><Copy className="w-3.5 h-3.5" /> Copy</>
+              {activeTab === "resume" && results["resume"] && (
+                <button
+                  onClick={downloadDocx}
+                  disabled={downloading}
+                  className="flex items-center gap-2 text-xs text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 transition-all px-4 py-2 rounded-xl font-bold shadow-lg shadow-primary/25 btn-hover"
+                >
+                  {downloading ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Working...</>
+                  ) : (
+                    <><Download className="w-3.5 h-3.5" /> Get DOCX</>
+                  )}
+                </button>
               )}
-            </button>
+            </div>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 max-h-[500px] overflow-y-auto chat-scroll">
-            <div className="markdown-content text-sm text-gray-700">
+          
+          <div className="bg-background/40 border border-border/30 rounded-xl p-6 max-h-[600px] overflow-y-auto chat-scroll custom-markdown">
+            <div className="markdown-content text-sm md:text-base leading-relaxed text-foreground/90 prose prose-invert max-w-none">
               <ReactMarkdown>{results[activeTab]}</ReactMarkdown>
             </div>
           </div>

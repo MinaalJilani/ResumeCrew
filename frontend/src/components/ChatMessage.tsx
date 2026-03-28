@@ -1,9 +1,9 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Bot, User, Download, Loader2 } from "lucide-react";
-import { API_BASE } from "../lib/api";
-import { getToken } from "../lib/auth";
-import { loadLinks, formatLinksForResume } from "../lib/links";
+import { API_BASE } from "@/lib/api";
+import { getToken } from "@/lib/auth";
+import { loadLinks, formatLinksForResume } from "@/lib/links";
 
 type Props = {
   role: "user" | "assistant";
@@ -45,7 +45,10 @@ export default function ChatMessage({ role, content, isLoading }: Props) {
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.detail || "Download failed");
+        const detail = typeof err.detail === 'string' 
+          ? err.detail 
+          : JSON.stringify(err.detail) || "Download failed";
+        throw new Error(detail);
       }
 
       const blob = await res.blob();
@@ -58,7 +61,8 @@ export default function ChatMessage({ role, content, isLoading }: Props) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (err: any) {
-      alert(`Download failed: ${err.message}`);
+      console.error("Download error:", err);
+      alert(`Download failed: ${err.message || "Unknown error"}`);
     } finally {
       setDownloading(false);
     }
@@ -68,10 +72,10 @@ export default function ChatMessage({ role, content, isLoading }: Props) {
     <div className={`flex gap-3 slide-up ${isUser ? "flex-row-reverse" : ""}`}>
       {/* Avatar */}
       <div
-        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+        className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center shadow-lg transform transition-transform hover:scale-110 ${
           isUser
-            ? "bg-blue-600 text-white"
-            : "bg-gradient-to-br from-violet-500 to-blue-500 text-white"
+            ? "bg-primary text-primary-foreground shadow-primary/20"
+            : "bg-secondary text-primary border border-primary/20 shadow-primary/5"
         }`}
       >
         {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
@@ -79,10 +83,10 @@ export default function ChatMessage({ role, content, isLoading }: Props) {
 
       {/* Message bubble */}
       <div
-        className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm ${
+        className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 text-sm transition-all duration-300 ${
           isUser
-            ? "bg-blue-600 text-white rounded-tr-sm"
-            : "bg-white border border-gray-200 text-gray-800 rounded-tl-sm shadow-sm"
+            ? "bg-primary text-primary-foreground rounded-tr-sm shadow-lg shadow-primary/20"
+            : "glass border-primary/10 text-foreground rounded-tl-sm shadow-xl"
         }`}
       >
         <div className={isLoading ? "typing-cursor pulse-subtle" : ""}>
@@ -97,16 +101,16 @@ export default function ChatMessage({ role, content, isLoading }: Props) {
 
         {/* Download button for resume-like messages */}
         {showDownload && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
+          <div className="mt-4 pt-4 border-t border-border/50">
             <button
               onClick={downloadDocx}
               disabled={downloading}
-              className="flex items-center gap-1.5 text-xs text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition px-3 py-1.5 rounded-lg font-medium"
+              className="flex items-center gap-2 text-xs text-primary-foreground bg-primary hover:opacity-90 disabled:opacity-50 transition-all px-4 py-2 rounded-xl font-bold shadow-lg shadow-primary/20 btn-hover"
             >
               {downloading ? (
-                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating DOCX...</>
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
               ) : (
-                <><Download className="w-3.5 h-3.5" /> Download as DOCX</>
+                <><Download className="w-3.5 h-3.5" /> Download (.docx)</>
               )}
             </button>
           </div>

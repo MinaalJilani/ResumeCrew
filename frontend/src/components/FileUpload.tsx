@@ -1,7 +1,14 @@
 import { useState, useRef } from "react";
-import { getToken } from "../lib/auth";
-import { API_BASE } from "../lib/api";
-import { Upload, FileText, CheckCircle, AlertCircle } from "lucide-react";
+import { getToken } from "@/lib/auth";
+import { API_BASE } from "@/lib/api";
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Props = {
   onSuccess?: () => void;
@@ -75,7 +82,7 @@ export default function FileUpload({ onSuccess }: Props) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Drag & Drop Zone */}
       <div
         onDragEnter={handleDrag}
@@ -83,14 +90,16 @@ export default function FileUpload({ onSuccess }: Props) {
         onDragOver={handleDrag}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+        className={`relative border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-300 group overflow-hidden ${
           dragActive
-            ? "border-blue-500 bg-blue-50"
+            ? "border-primary bg-primary/10"
             : file
-            ? "border-green-300 bg-green-50"
-            : "border-gray-300 hover:border-blue-400 hover:bg-gray-50"
+            ? "border-green-500/50 bg-green-500/5"
+            : "border-border hover:border-primary/50 hover:bg-primary/5"
         }`}
       >
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+        
         <input
           ref={fileInputRef}
           type="file"
@@ -100,54 +109,60 @@ export default function FileUpload({ onSuccess }: Props) {
         />
 
         {file ? (
-          <div className="flex items-center justify-center gap-3 text-green-700">
-            <FileText className="w-8 h-8" />
-            <div className="text-left">
-              <p className="font-medium">{file.name}</p>
-              <p className="text-xs text-green-600">
+          <div className="flex flex-col items-center gap-3 text-green-500 relative z-10">
+            <div className="w-16 h-16 bg-green-500/10 rounded-2xl flex items-center justify-center mb-2">
+              <FileText className="w-8 h-8" />
+            </div>
+            <div className="text-center">
+              <p className="font-bold text-foreground">{file.name}</p>
+              <p className="text-xs text-green-500 font-medium mt-1">
                 {(file.size / 1024).toFixed(1)} KB — Click to change
               </p>
             </div>
           </div>
         ) : (
-          <div className="text-gray-500">
-            <Upload className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-            <p className="font-medium">Drop your file here or click to browse</p>
-            <p className="text-xs mt-1 text-gray-400">PDF, DOCX, TXT, MD — Max 10MB</p>
+          <div className="text-muted-foreground relative z-10">
+            <div className="w-16 h-16 bg-secondary/50 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform group-hover:text-primary">
+              <Upload className="w-8 h-8" />
+            </div>
+            <p className="font-bold text-foreground text-lg">Drop your file here</p>
+            <p className="text-sm mt-1">or click to browse from your device</p>
+            <p className="text-[10px] uppercase tracking-widest mt-6 opacity-40 font-bold">PDF, DOCX, TXT, MD — Max 10MB</p>
           </div>
         )}
       </div>
 
       {/* Controls */}
-      <div className="flex gap-3 items-end">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Document Type</label>
-          <select
-            value={docType}
-            onChange={(e) => setDocType(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2.5 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-          >
-            <option value="cv">📄 CV / Resume</option>
-            <option value="project">🛠️ Project Description</option>
-            <option value="certificate">🏆 Certificate</option>
-            <option value="cover_letter">✉️ Cover Letter</option>
-          </select>
+      <div className="flex flex-col sm:flex-row gap-4 items-end">
+        <div className="flex-1 w-full">
+          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 ml-1">Document Type</label>
+          <Select value={docType} onValueChange={setDocType}>
+            <SelectTrigger className="w-full bg-secondary/50 border-border h-[46px] rounded-xl focus:ring-primary/50 text-foreground btn-hover">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent className="glass border-border/50">
+              <SelectItem value="cv">📄 CV / Resume</SelectItem>
+              <SelectItem value="project">🛠️ Project Description</SelectItem>
+              <SelectItem value="certificate">🏆 Certificate</SelectItem>
+              <SelectItem value="cover_letter">✉️ Cover Letter</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <button
           onClick={handleUpload}
           disabled={!file || uploading}
-          className="bg-blue-600 text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition whitespace-nowrap flex items-center gap-2"
+          className="w-full sm:w-auto bg-primary text-primary-foreground px-8 py-3 rounded-xl text-sm font-bold hover:opacity-90 disabled:opacity-40 transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 h-[46px]"
         >
           {uploading ? (
             <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Uploading...
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Uploading...</span>
             </>
           ) : (
             <>
               <Upload className="w-4 h-4" />
-              Upload
+              <span>Upload</span>
             </>
           )}
         </button>
@@ -156,16 +171,16 @@ export default function FileUpload({ onSuccess }: Props) {
       {/* Status */}
       {status && (
         <div
-          className={`flex items-center gap-2 p-3 rounded-lg text-sm slide-up ${
+          className={`flex items-center gap-3 p-4 rounded-xl text-sm font-medium animate-in slide-in-from-top-2 duration-300 ${
             status.type === "success"
-              ? "bg-green-50 text-green-700 border border-green-200"
-              : "bg-red-50 text-red-700 border border-red-200"
+              ? "bg-green-500/10 text-green-500 border border-green-500/20"
+              : "bg-red-500/10 text-red-500 border border-red-500/20"
           }`}
         >
           {status.type === "success" ? (
-            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            <CheckCircle className="w-5 h-5 flex-shrink-0" />
           ) : (
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
           )}
           {status.message}
         </div>

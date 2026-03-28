@@ -278,7 +278,13 @@ def generate_resume_docx(resume_text: str, candidate_name: str = "", profile_lin
         # Bullet point
         if raw.startswith(("-", "*", "•")):
             bullet = re.sub(r"^[-*•]\s*", "", clean)
-            p = doc.add_paragraph(style="List Bullet")
+            try:
+                p = doc.add_paragraph(style="List Bullet")
+            except Exception:
+                # Fallback if "List Bullet" style is missing in default template
+                p = doc.add_paragraph()
+                bullet = f"• {bullet}"
+            
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after  = Pt(1)
             p.paragraph_format.left_indent  = Inches(0.2)

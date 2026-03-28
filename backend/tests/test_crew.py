@@ -1,6 +1,5 @@
-"""
-End-to-end test — ingest a CV, then run the full crew with a job description.
-This is the FINAL test before moving to frontend.
+﻿"""
+End-to-end test -- ingest a CV, then run the full crew with a job description.
 """
 
 import sys
@@ -13,8 +12,11 @@ load_dotenv()
 from agents.ingest import ingest_document
 from agents.retrieval import retrieve_context_for_job
 from agents.researcher import researcher_agent, make_research_task
-from agents.resume import resume_agent, make_resume_task
-from agents.cover_letter import cover_letter_agent, make_cover_letter_task
+from agents.application_materials import (
+    application_materials_agent,
+    make_application_materials_task,
+    generate_materials,
+)
 from agents.interview import interview_agent, make_interview_task
 from pinecone_client import delete_all_user_data
 from crewai import Crew, Process
@@ -86,15 +88,13 @@ Requirements:
 
 def test_full_crew():
     print("\n" + "=" * 60)
-    print("  FULL CREW TEST — End to End")
+    print("  FULL CREW TEST -- End to End")
     print("=" * 60 + "\n")
 
-    # Cleanup
     delete_all_user_data(TEST_USER)
     time.sleep(2)
 
-    # Step 1: Ingest CV
-    print("📄 Step 1: Ingesting CV...")
+    print("Step 1: Ingesting CV...")
     with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
         f.write(TEST_CV)
         tmp_path = f.name
@@ -102,29 +102,26 @@ def test_full_crew():
     try:
         result = ingest_document(tmp_path, TEST_USER, "cv", "test_cv")
         assert result["status"] == "success"
-        print(f"   ✅ Ingested {result['chunks']} chunks\n")
+        print(f"   OK Ingested {result['chunks']} chunks\n")
     finally:
         os.unlink(tmp_path)
 
     time.sleep(3)
 
-    # Step 2: Retrieve context
-    print("🔍 Step 2: Retrieving context for job description...")
+    print("Step 2: Retrieving context for job description...")
     context = retrieve_context_for_job(TEST_USER, TEST_JOB)
-    print(f"   ✅ Retrieved {len(context)} chars of context\n")
+    print(f"   OK Retrieved {len(context)} chars of context\n")
 
-    # Step 3: Run crew
-    print("🤖 Step 3: Running full agent crew...")
+    print("Step 3: Running full agent crew (3 CrewAI agents)...")
     print("   (This will take 1-3 minutes)\n")
 
     research_task = make_research_task(TEST_JOB)
-    resume_task = make_resume_task(TEST_JOB, context)
-    cover_task = make_cover_letter_task(TEST_JOB, context, "")
+    materials_task = make_application_materials_task(TEST_JOB, context)
     interview_task = make_interview_task(TEST_JOB, context, "")
 
     crew = Crew(
-        agents=[researcher_agent, resume_agent, cover_letter_agent, interview_agent],
-        tasks=[research_task, resume_task, cover_task, interview_task],
+        agents=[researcher_agent, application_materials_agent, interview_agent],
+        tasks=[research_task, materials_task, interview_task],
         process=Process.sequential,
         verbose=True,
     )
@@ -135,21 +132,25 @@ def test_full_crew():
     print("  RESULTS")
     print("=" * 60)
 
-    # Print task outputs
-    if hasattr(result, 'tasks_output'):
-        labels = ["Company Research", "Tailored Resume", "Cover Letter", "Interview Prep"]
-        for i, (label, output) in enumerate(zip(labels, result.tasks_output)):
-            print(f"\n{'─' * 40}")
-            print(f"📋 {label}")
-            print(f"{'─' * 40}")
-            print(str(output)[:500] + "..." if len(str(output)) > 500 else str(output))
+    if hasattr(result, "tasks_output"):
+        outs = result.tasks_output
+        labels = ["Company Research", "Application materials (JSON)", "Interview Prep"]
+        for i, (label, output) in enumerate(zip(labels, outs)):
+            print(f"\n{'-' * 40}")
+            print(f" {label}")
+            print(f"{'-' * 40}")
+            s = str(output)
+            print(s[:500] + "..." if len(s) > 500 else s)
+        if len(outs) > 1:
+            d = generate_materials(str(outs[1]))
+            print(f"\nParsed resume length: {len(d.get('resume', ''))}")
+            print(f"Parsed cover_letter length: {len(d.get('cover_letter', ''))}")
     else:
         print(str(result)[:2000])
 
-    # Cleanup
     delete_all_user_data(TEST_USER)
     print(f"\n{'=' * 60}")
-    print("  ✅ FULL CREW TEST PASSED!")
+    print("  FULL CREW TEST PASSED")
     print(f"{'=' * 60}\n")
 
 

@@ -1,17 +1,19 @@
-"""
+﻿"""
 Wires all agents into a single CrewAI crew.
 Called when the chat router detects a job description.
 """
 
 import logging
-from typing import Optional
 
 from crewai import Crew, Process
 
 from agents.retrieval import retrieve_context_for_job
 from agents.researcher import researcher_agent, make_research_task
-from agents.resume import resume_agent, make_resume_task
-from agents.cover_letter import cover_letter_agent, make_cover_letter_task
+from agents.application_materials import (
+    application_materials_agent,
+    make_application_materials_task,
+    generate_materials,
+)
 from agents.interview import interview_agent, make_interview_task
 
 logger = logging.getLogger(__name__)
@@ -30,9 +32,8 @@ def run_full_crew(
     Steps:
     1. Retrieve user context from Pinecone
     2. Run company research (Agent 5)
-    3. Build resume (Agent 3) using context
-    4. Write cover letter (Agent 4) using context + research
-    5. Generate interview prep (Agent 6)
+    3. Build resume + cover letter in one task (Agents 3-4 consolidated)
+    4. Generate interview prep (Agent 6)
     """
     try:
         job_results[job_id]["logs"].append("Starting agent crew...")
@@ -54,19 +55,25 @@ def run_full_crew(
         job_results[job_id]["logs"].append("Agent 5: Researching company...")
         research_task = make_research_task(job_description)
 
-        job_results[job_id]["logs"].append("Agent 3: Building tailored resume...")
-        resume_task = make_resume_task(job_description, user_context)
-
-        job_results[job_id]["logs"].append("Agent 4: Writing cover letter...")
-        cover_letter_task = make_cover_letter_task(job_description, user_context, "")
+        job_results[job_id]["logs"].append("Application materials: tailored resume + cover letter...")
+        application_materials_task = make_application_materials_task(
+            job_description, user_context
+        )
 
         job_results[job_id]["logs"].append("Agent 6: Preparing interview questions...")
         interview_task = make_interview_task(job_description, user_context, "")
 
-        # Step 3: Run the crew
         crew = Crew(
-            agents=[researcher_agent, resume_agent, cover_letter_agent, interview_agent],
-            tasks=[research_task, resume_task, cover_letter_task, interview_task],
+            agents=[
+                researcher_agent,
+                application_materials_agent,
+                interview_agent,
+            ],
+            tasks=[
+                research_task,
+                application_materials_task,
+                interview_task,
+            ],
             process=Process.sequential,
             verbose=True,
         )
@@ -75,17 +82,26 @@ def run_full_crew(
 
         result = crew.kickoff()
 
-        # Step 4: Parse results
-        task_outputs = result.tasks_output if hasattr(result, 'tasks_output') else []
+        task_outputs = result.tasks_output if hasattr(result, "tasks_output") else []
 
         outputs = {}
-        labels = ["company_research", "resume", "cover_letter", "interview_prep"]
+        if len(task_outputs) > 0:
+            outputs["company_research"] = str(task_outputs[0])
+        else:
+            outputs["company_research"] = "Not generated"
 
-        for i, label in enumerate(labels):
-            if i < len(task_outputs):
-                outputs[label] = str(task_outputs[i])
-            else:
-                outputs[label] = "Not generated"
+        if len(task_outputs) > 1:
+            mats = generate_materials(str(task_outputs[1]))
+            outputs["resume"] = mats.get("resume") or "Not generated"
+            outputs["cover_letter"] = mats.get("cover_letter") or "Not generated"
+        else:
+            outputs["resume"] = "Not generated"
+            outputs["cover_letter"] = "Not generated"
+
+        if len(task_outputs) > 2:
+            outputs["interview_prep"] = str(task_outputs[2])
+        else:
+            outputs["interview_prep"] = "Not generated"
 
         # Also store the full raw output
         outputs["full_output"] = str(result)
