@@ -7,7 +7,6 @@ import { UserPlus, AlertCircle, Bot } from "lucide-react";
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -18,7 +17,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const data = await apiRegister(email, password, fullName);
+      const data = await apiRegister(email, password, "");
       saveAuth(data.token, data.user_id, data.email);
       navigate("/dashboard");
     } catch (err: any) {
@@ -48,17 +47,6 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="Ahmed Khan"
-              />
-            </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>

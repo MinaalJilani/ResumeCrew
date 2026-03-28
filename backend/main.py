@@ -14,6 +14,7 @@ from typing import Optional
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -160,6 +161,73 @@ async def upload_document(
 async def get_documents(user_id: str = Depends(get_current_user)):
     docs = list_user_documents(user_id)
     return {"documents": docs}
+
+
+@app.delete("/documents/{doc_id}")
+async def delete_document_endpoint(doc_id: str, user_id: str = Depends(get_current_user)):
+    from pinecone_client import delete_document
+    success = delete_document(user_id, doc_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete document")
+    return {"status": "deleted", "doc_id": doc_id}
+
+
+# ── Generate chat session title ───────────────────────────────────────────────
+
+class TitleRequest(BaseModel):
+    message: str
+
+@app.post("/chat/title")
+async def generate_title(body: TitleRequest, user_id: str = Depends(get_current_user)):
+    import os
+    from groq import Groq
+    client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+    try:
+        res = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Generate a concise 3-5 word title for a chat session based on the user's first message. "
+                        "Match the style of ChatGPT titles: short, descriptive, title case, no quotes, no punctuation. "
+                        "Examples: 'Resume for Marketing Role', 'Python Interview Questions', 'Cover Letter Help'. "
+                        "Respond with ONLY the title, nothing else."
+                    ),
+                },
+                {"role": "user", "content": body.message[:500]},
+            ],
+            max_tokens=20,
+            temperature=0.7,
+        )
+        title = res.choices[0].message.content.strip().strip('"').strip("'")
+        return {"title": title}
+    except Exception as e:
+        # Fallback to truncated message
+        return {"title": body.message[:40]}
+
+
+# ── Resume DOCX download ──────────────────────────────────────────────────────
+
+class ResumeDownloadRequest(BaseModel):
+    resume_text: str
+    candidate_name: str = ""
+    profile_links: list[str] = []
+
+@app.post("/resume/download")
+async def download_resume(body: ResumeDownloadRequest, user_id: str = Depends(get_current_user)):
+    from resume_generator import generate_resume_docx
+    from fastapi.responses import Response
+    try:
+        docx_bytes = generate_resume_docx(body.resume_text, body.candidate_name, body.profile_links)
+        filename = f"{body.candidate_name or 'Resume'}_ResumeCrew.docx".replace(" ", "_")
+        return Response(
+            content=docx_bytes,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate DOCX: {str(e)}")
 
 
 # ── Chat endpoint ─────────────────────────────────────────────────────────────

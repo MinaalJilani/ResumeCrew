@@ -26,3 +26,6 @@ Thumbs.db
 
 # Backups
 frontend_backup/
+
+# Local tooling
+.claude/

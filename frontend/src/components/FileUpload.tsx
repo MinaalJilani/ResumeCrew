@@ -43,6 +43,12 @@ export default function FileUpload({ onSuccess }: Props) {
         if (fileInputRef.current) fileInputRef.current.value = "";
         onSuccess?.();
       } else {
+        if (res.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user_id");
+          localStorage.removeItem("email");
+          window.location.href = "/login";
+        }
         setStatus({ type: "error", message: data.detail || "Upload failed" });
       }
     } catch (err: any) {

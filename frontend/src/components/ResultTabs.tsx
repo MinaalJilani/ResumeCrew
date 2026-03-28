@@ -1,6 +1,9 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Copy, Check, FileText, Mail, Search, Mic, AlertCircle, ClipboardList } from "lucide-react";
+import { Copy, Check, FileText, Mail, Search, Mic, AlertCircle, ClipboardList, Download, Loader2 } from "lucide-react";
+import { API_BASE } from "../lib/api";
+import { getToken } from "../lib/auth";
+import { loadLinks, formatLinksForResume } from "../lib/links";
 
 type Props = {
   results: Record<string, string>;
@@ -21,6 +24,7 @@ export default function ResultTabs({ results }: Props) {
   );
   const [activeTab, setActiveTab] = useState(tabs[0] || "");
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   if (tabs.length === 0) return null;
 
@@ -28,6 +32,46 @@ export default function ResultTabs({ results }: Props) {
     navigator.clipboard.writeText(results[activeTab]);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  async function downloadDocx() {
+    setDownloading(true);
+    try {
+      const token = getToken();
+      const profileLinks = formatLinksForResume(loadLinks());
+      const res = await fetch(`${API_BASE}/resume/download`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          resume_text: results["resume"],
+          candidate_name: localStorage.getItem("full_name") || "",
+          profile_links: profileLinks,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || "Download failed");
+      }
+
+      // Trigger browser download
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "Resume_ResumeCrew.docx";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert(`Download failed: ${err.message}`);
+    } finally {
+      setDownloading(false);
+    }
   }
 
   return (
@@ -56,21 +100,30 @@ export default function ResultTabs({ results }: Props) {
 
         {/* Tab content */}
         <div className="p-4">
-          <div className="flex justify-end mb-2">
+          <div className="flex justify-end items-center gap-2 mb-2">
+            {/* Download DOCX — only on resume tab */}
+            {activeTab === "resume" && results["resume"] && (
+              <button
+                onClick={downloadDocx}
+                disabled={downloading}
+                className="flex items-center gap-1.5 text-xs text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 transition px-3 py-1.5 rounded-lg font-medium"
+              >
+                {downloading ? (
+                  <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                ) : (
+                  <><Download className="w-3.5 h-3.5" /> Download DOCX</>
+                )}
+              </button>
+            )}
+
             <button
               onClick={copyToClipboard}
               className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-blue-600 transition px-2 py-1 rounded hover:bg-blue-50"
             >
               {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  Copied!
-                </>
+                <><Check className="w-3.5 h-3.5" /> Copied!</>
               ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5" />
-                  Copy to clipboard
-                </>
+                <><Copy className="w-3.5 h-3.5" /> Copy</>
               )}
             </button>
           </div>

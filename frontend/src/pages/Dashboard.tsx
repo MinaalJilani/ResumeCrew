@@ -1,17 +1,23 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import FileUpload from "../components/FileUpload";
-import { apiGetDocuments } from "../lib/api";
+import LinksPanel from "../components/LinksPanel";
+import { apiGetDocuments, apiDeleteDocument } from "../lib/api";
 import { isLoggedIn, getEmail } from "../lib/auth";
 import {
-  MessageSquare, FileText, FolderOpen, CheckCircle,
-  RefreshCw, ArrowRight, Upload as UploadIcon, Sparkles
+  MessageSquare, FileText, FolderOpen, CheckCircle, User,
+  RefreshCw, ArrowRight, Upload as UploadIcon, Trash2, AlertTriangle, X
 } from "lucide-react";
 
 export default function DashboardPage() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDoc, setConfirmDoc] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: "error" | "success" } | null>(null);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [newFullName, setNewFullName] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,6 +26,12 @@ export default function DashboardPage() {
       return;
     }
     loadDocuments();
+    
+    // Check if we need to ask for their full name
+    const storedName = localStorage.getItem("full_name");
+    if (!storedName) {
+      setShowNameModal(true);
+    }
   }, [navigate]);
 
   async function loadDocuments() {
@@ -39,10 +51,116 @@ export default function DashboardPage() {
     loadDocuments();
   }
 
+  async function confirmDelete() {
+    if (!confirmDoc) return;
+    setDeleting(confirmDoc);
+    setConfirmDoc(null);
+    try {
+      await apiDeleteDocument(confirmDoc);
+      await loadDocuments();
+      showToast("Document deleted successfully.", "success");
+    } catch (err) {
+      showToast("Failed to delete document. Please try again.", "error");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  function showToast(msg: string, type: "error" | "success") {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  function handleSaveName(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newFullName.trim()) return;
+    localStorage.setItem("full_name", newFullName.trim());
+    setShowNameModal(false);
+    showToast("Name saved successfully!", "success");
+  }
+
   const email = getEmail();
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 pb-12">
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium transition-all ${
+          toast.type === "error" ? "bg-red-50 text-red-700 border border-red-200" : "bg-green-50 text-green-700 border border-green-200"
+        }`}>
+          {toast.type === "error" ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
+          {toast.msg}
+          <button onClick={() => setToast(null)} className="ml-1 opacity-60 hover:opacity-100"><X className="w-3.5 h-3.5" /></button>
+        </div>
+      )}
+
+      {/* Welcome / Name Modal */}
+      {showNameModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-sm w-full border text-center animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <User className="w-8 h-8 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Welcome to ResumeCrew!</h3>
+            <p className="text-gray-500 text-sm mb-6">
+              Please enter your full name. We'll use this automatically at the top of the resumes we generate for you.
+            </p>
+            <form onSubmit={handleSaveName}>
+              <input
+                type="text"
+                value={newFullName}
+                onChange={(e) => setNewFullName(e.target.value)}
+                placeholder="E.g. John Doe"
+                required
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base mb-4 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition text-center font-medium"
+              />
+              <button
+                type="submit"
+                disabled={!newFullName.trim()}
+                className="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                Save & Continue
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Delete Modal */}
+      {confirmDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 border">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Delete Document</h3>
+                <p className="text-gray-500 text-xs">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-5 bg-gray-50 rounded-lg px-3 py-2 font-mono break-all">
+              {confirmDoc}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDoc(null)}
+                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2 rounded-xl text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -74,6 +192,9 @@ export default function DashboardPage() {
         </div>
         <FileUpload onSuccess={loadDocuments} />
       </div>
+
+      {/* Profile Links */}
+      <LinksPanel />
 
       {/* Documents List */}
       <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
@@ -123,45 +244,27 @@ export default function DashboardPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-green-600 text-xs font-medium bg-green-50 px-2.5 py-1 rounded-full">
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  Indexed
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 text-green-600 text-xs font-medium bg-green-50 px-2.5 py-1 rounded-full">
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    Indexed
+                  </div>
+                  <button
+                    onClick={() => setConfirmDoc(doc.doc_id)}
+                    disabled={deleting === doc.doc_id}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-50"
+                    title="Delete document"
+                  >
+                    {deleting === doc.doc_id
+                      ? <RefreshCw className="w-4 h-4 animate-spin" />
+                      : <Trash2 className="w-4 h-4" />}
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
-
-      {/* Quick Start Guide */}
-      <div className="bg-gradient-to-br from-blue-50 to-violet-50 rounded-2xl p-6 border border-blue-100">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
-            <Sparkles className="w-5 h-5 text-blue-600" />
-          </div>
-          <h2 className="text-lg font-semibold">How it works</h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StepItem step={1} text="Upload your CV above (PDF or DOCX)" done={documents.length > 0} />
-          <StepItem step={2} text="Go to the Chat page" />
-          <StepItem step={3} text="Paste a job description" />
-          <StepItem step={4} text="Get your tailored application package!" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StepItem({ step, text, done }: { step: number; text: string; done?: boolean }) {
-  return (
-    <div className={`flex items-start gap-3 p-3 rounded-xl ${done ? "bg-green-50 border border-green-200" : "bg-white border border-gray-100"}`}>
-      <span className={`flex-shrink-0 w-7 h-7 rounded-full text-xs font-bold flex items-center justify-center ${
-        done ? "bg-green-500 text-white" : "bg-blue-600 text-white"
-      }`}>
-        {done ? "✓" : step}
-      </span>
-      <p className={`text-sm ${done ? "text-green-700" : "text-gray-600"}`}>{text}</p>
     </div>
   );
 }

@@ -136,7 +136,7 @@ def query_context(
     top_k: int = 8,
     doc_type: Optional[str] = None,
     section: Optional[str] = None,
-    min_score: float = 0.30,
+    min_score: float = 0.15,
 ) -> list[str]:
     """Retrieve most relevant chunks for a query, scoped to user."""
     query_vector = embed(query)
@@ -237,6 +237,10 @@ def list_user_documents(user_id: str) -> list[dict]:
         for match in response["matches"]:
             meta = match.get("metadata", {})
             doc_id = meta.get("doc_id", "unknown")
+            doc_type = meta.get("doc_type", "unknown")
+            # Skip internal profile summaries — not a user-uploaded document
+            if doc_type == "profile_summary":
+                continue
             if doc_id not in doc_map:
                 doc_map[doc_id] = {
                     "doc_id": doc_id,

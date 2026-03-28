@@ -14,8 +14,21 @@ function getHeaders(): HeadersInit {
 }
 
 async function handleResponse(res: Response) {
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    data = {};
+  }
+
   if (!res.ok) {
+    if (res.status === 401) {
+      // Token expired or invalid — clear local state and force re-login
+      localStorage.removeItem("token");
+      localStorage.removeItem("user_id");
+      localStorage.removeItem("email");
+      window.location.href = "/login";
+    }
     throw new Error(data.detail || data.error || `HTTP ${res.status}`);
   }
   return data;
@@ -66,6 +79,14 @@ export async function apiGetDocuments() {
   return handleResponse(res);
 }
 
+export async function apiDeleteDocument(docId: string) {
+  const res = await fetch(`${API_BASE}/documents/${encodeURIComponent(docId)}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+  return handleResponse(res);
+}
+
 // ── Chat ─────────────────────────────────────────────────────────────────────
 
 export async function apiChat(message: string, sessionId: string = "main") {
@@ -90,6 +111,15 @@ export async function apiGetResults(jobId: string) {
 
 export async function apiHealth() {
   const res = await fetch(`${API_BASE}/health`);
+  return handleResponse(res);
+}
+
+export async function apiGenerateChatTitle(message: string) {
+  const res = await fetch(`${API_BASE}/chat/title`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({ message }),
+  });
   return handleResponse(res);
 }
 

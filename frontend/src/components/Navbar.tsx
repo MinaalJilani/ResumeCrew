@@ -12,10 +12,17 @@ export default function Navbar() {
 
   return (
     <nav className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-50">
-      <Link to="/" className="flex items-center gap-2 text-xl font-bold text-blue-600 hover:text-blue-700 transition">
-        <Bot className="w-6 h-6" />
-        <span className="hidden sm:inline">ResumeCrew</span>
-      </Link>
+      <div className="flex items-center gap-2">
+        <Link to="/" className="flex items-center gap-2 text-xl font-bold text-blue-600 hover:text-blue-700 transition">
+          <Bot className="w-6 h-6" />
+          <span className="hidden sm:inline">ResumeCrew</span>
+        </Link>
+        {loggedIn && (
+          <div className="hidden md:block text-sm text-gray-500 pl-3 border-l ml-1 font-medium">
+            {localStorage.getItem("full_name") || email}
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center gap-1 md:gap-2">
         {loggedIn ? (
@@ -42,9 +49,6 @@ export default function Navbar() {
               <MessageSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Chat</span>
             </Link>
-            <div className="hidden md:block text-xs text-gray-400 px-2 border-l ml-1">
-              {email}
-            </div>
             <button
               onClick={() => { logout(); navigate("/"); }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 transition"

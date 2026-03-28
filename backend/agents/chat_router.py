@@ -107,13 +107,23 @@ class ChatSession:
         context_chunks = query_context(self.user_id, message, top_k=5)
         context_str = "\n\n".join(context_chunks) if context_chunks else ""
 
-        # Build messages for OpenAI
+        # Build messages for Groq
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
         if context_str:
             messages.append({
                 "role": "system",
                 "content": f"Retrieved context from user's profile:\n{context_str}",
+            })
+        else:
+            messages.append({
+                "role": "system",
+                "content": (
+                    "WARNING: No profile context was found in the database for this user. "
+                    "Do NOT invent or hallucinate any experience, skills, or achievements. "
+                    "Tell the user honestly that their profile data could not be retrieved, "
+                    "and ask them to upload their CV on the Dashboard first."
+                ),
             })
 
         # Add conversation history
