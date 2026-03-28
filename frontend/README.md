@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# ResumeCrew Frontend
 
 TODO: Document your project here
