@@ -22,7 +22,8 @@ async function handleResponse(res: Response) {
   }
 
   if (!res.ok) {
-    if (res.status === 401) {
+    // Only redirect if it's an authenticated endpoint (not the login endpoint itself)
+    if (res.status === 401 && !res.url.includes("/login")) {
       // Token expired or invalid — clear local state and force re-login
       localStorage.removeItem("token");
       localStorage.removeItem("user_id");

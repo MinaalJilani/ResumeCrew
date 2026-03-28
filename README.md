@@ -1,51 +1,23 @@
-# ResumeCrew: AI-Powered Career Suite 🚀
+# 🤖 ResumeCrew
 
-**ResumeCrew** is a state-of-the-art multi-agent system designed to give job seekers an unfair advantage. By orchestrating a specialized "Crew" of AI agents, it transforms a generic CV and a job description into a perfectly tailored application package in under 2 minutes.
+**ResumeCrew** is a full-stack AI-powered job application assistant. It uses a swarm of specialized AI agents to help you land your dream job by automatically generating highly tailored resumes, cover letters, company research, and interview preparation materials based on your real experience.
 
-## 🤖 The Agent Crew
+## ✨ Features
 
-The system is powered by **CrewAI**, coordinated across several specialized agents:
+- **ATS Resume Builder**: Tailored, ATS-optimized resume using your real experience matched to the job description keywords.
+- **Cover Letter Writer**: Personalized cover letters referencing company values, news, and your top achievements.
+- **Company Researcher**: Culture, recent news, tech stack, and interview insights generated from live web research.
+- **Interview Coach**: Likely interview questions with strong STAR-format answer frameworks tailored to you.
 
-1. **The Chat Router (Intent Guru)**
-   - **File**: `chat_router.py`
-   - **Mission**: The entry point for all interactions. It parses natural language to decide if you need a quick answer or a full agent execution.
-   - **Capability**: Detects Job Descriptions with high precision and manages long-term memory via conversation history.
+## 🛠️ Technology Stack
 
-2. **The Research Analyst (Sherlock)**
-   - **File**: `researcher.py`
-   - **Mission**: Performs deep-dive research into the hiring company and the specific requirements of the role.
-   - **Capability**: Identifies "hidden" requirements and company culture markers that are crucial for successful tailoring.
-
-3. **The Materials Architect (The Tailor)**
-   - **File**: `application_materials.py`
-   - **Mission**: The core engine that generates your **Tailored Resume** and **Cover Letter**.
-   - **Capability**: Merges your real-world experience (retrieved semantically from Pinecone) with the job's needs to ensure maximum ATS compatibility and human appeal.
-
-4. **The Interview Coach (The Preparer)**
-   - **File**: `interview.py`
-   - **Mission**: Predicts the exact questions you'll face based on the JD and your background.
-   - **Capability**: Provides sample answers and technical talking points specific to the role.
-
----
-
-## 🛠️ Core Technology Stack
-
-- **Large Language Models**: Powered by **Groq** (Llama-3.1-70B/8B) for lightning-fast, intelligent reasoning.
-- **Agent Orchestration**: **CrewAI** for sequential and hierarchical task management.
-- **Vector Database**: **Pinecone** for semantic retrieval and long-term storage of your career profile.
-- **Auth & Database**: **Supabase** for secure user management, OAuth (Google/GitHub), and metadata storage.
-- **Frontend**: **Vite + React** with a premium "Dark-Neon" glassmorphic UI.
-- **Backend**: **FastAPI** with asynchronous streaming for a real-time "thinking" feel.
-
-## ✨ Key Functionalities
-
-- **Semantic Profiling**: Don't just upload a file; our Agents "understand" your career. We split your CV into meaningful chunks and store them as mathematical vectors.
-- **One-Click Tailoring**: Simply paste a URL or text from LinkedIn/Indeed, and the Crew builds your entire application suite.
-- **Interactive Chat**: Ask questions like "What skills should I learn for this role?" or "Rewrite my summary for senior positions."
-- **Professional Exports**: Download your tailored resume as a polished **DOCX** file, ready for submission.
-- **Data Privacy**: Every user's data is isolated in a private namespace, ensuring your career history stays YOURS.
-
----
+- **Frontend**: React 19 + TypeScript + Vite + TailwindCSS 
+- **Backend**: Python + FastAPI
+- **Authentication**: Supabase (Email/Password Auth)
+- **AI / LLMs**: Groq (Llama-3 models)
+- **Agent Framework**: CrewAI
+- **Vector Database**: Pinecone
+- **Embeddings**: Local HuggingFace Models (`sentence-transformers/all-MiniLM-L6-v2`)
 
 ## 🚀 Getting Started
 
@@ -57,17 +29,54 @@ The system is powered by **CrewAI**, coordinated across several specialized agen
 - Groq API Key
 
 ### 2. Backend Setup
-1. Navigate to the backend directory: `cd backend`
-2. Create and activate a Python virtual environment.
-3. Install dependencies: `pip install -r requirements.txt`
-4. Configure your environment variables in `backend/.env`.
-5. Start the FastAPI server: `uvicorn main:app --reload` (Runs on `http://localhost:8000`)
+
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+2. Create and activate a Python virtual environment:
+   ```bash
+   python -m venv venv
+   source venv/Scripts/activate  # On Windows
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Configure your environment variables in `backend/.env`:
+   ```env
+   GROQ_API_KEY=your_groq_api_key
+   PINECONE_API_KEY=your_pinecone_api_key
+   PINECONE_INDEX=job-agent
+   PINECONE_CLOUD=aws
+   PINECONE_REGION=us-east-1
+   SERPER_API_KEY=your_serper_api_key
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_anon_key
+   ```
+   *(Note: Ensure your Pinecone index has dimensions set to **384** and metric strictly set to **cosine**)*
+
+5. Start the FastAPI server:
+   ```bash
+   uvicorn main:app --reload
+   ```
+   *(The API runs on `http://localhost:8000`)*
 
 ### 3. Frontend Setup
-1. Navigate to the frontend directory: `cd frontend`
-2. Install Node dependencies: `npm install`
-3. Start the development server: `npm run dev` (Runs on `http://localhost:5173`)
 
----
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install Node dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
+   *(The UI runs on `http://localhost:5173`)*
 
-*Built with ❤️ for the next generation of job seekers.*
+## 🔒 Privacy First
+Your data is securely isolated. Because ResumeCrew relies entirely on a localized Vector Search index for your CV, your historical work experience is passed directly (and only) into the generation pipeline when building a tailored resume. No hallucinated experiences, and complete privacy context.

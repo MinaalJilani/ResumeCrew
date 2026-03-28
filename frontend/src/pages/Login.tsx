@@ -34,6 +34,7 @@ const Login = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isGithubLoading, setIsGithubLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     // Check if we just redirected back from an OAuth provider
@@ -54,10 +55,16 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       if (isSignUp) {
-        await apiRegister(email, password, name);
+        const regData = await apiRegister(email, password, name);
+        if (!regData.token) {
+          setSuccess("Check your email for confirmation!");
+          setIsSignUp(false);
+          return;
+        }
         const data = await apiLogin(email, password);
         login(data.token, data.user_id, data.email);
         if (name) localStorage.setItem("full_name", name);
@@ -129,6 +136,12 @@ const Login = () => {
               <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-sm animate-in fade-in slide-in-from-top-1">
                 <AlertCircle className="h-4 w-4 shrink-0" />
                 <p>{error}</p>
+              </div>
+            )}
+            {success && (
+              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-500 p-3 rounded-lg text-sm animate-in fade-in slide-in-from-top-1">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <p>{success}</p>
               </div>
             )}
             {/* Social Buttons */}
