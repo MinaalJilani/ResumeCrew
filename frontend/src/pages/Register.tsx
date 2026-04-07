@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiRegister } from "../lib/api";
-import { saveAuth } from "../lib/auth";
+import { login } from "../lib/auth";
 import { UserPlus, AlertCircle, Bot } from "lucide-react";
 
 export default function RegisterPage() {
@@ -18,7 +18,7 @@ export default function RegisterPage() {
 
     try {
       const data = await apiRegister(email, password, "");
-      saveAuth(data.token, data.user_id, data.email);
+      login(data.token, data.user_id, data.email);
       navigate("/dashboard");
     } catch (err: any) {
       setError(err.message || "Registration failed. Is the backend running?");

@@ -19,8 +19,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from agents.chat_router import ChatSession
-from agents.ingest import ingest_document
 from database import init_db
 from auth import (
     create_user, authenticate_user,
@@ -71,7 +69,7 @@ app.add_middleware(
 init_db()
 
 # In-memory stores (use Redis in production)
-chat_sessions: dict[str, ChatSession] = {}
+chat_sessions: dict[str, "ChatSession"] = {}
 job_results: dict[str, dict] = {}
 
 
@@ -132,7 +130,8 @@ async def upload_document(
         doc_id = os.path.splitext(file.filename)[0]
         
         try:
-            result = ingest_document(
+            ingest_func = get_ingest()
+            result = ingest_func(
                 file_path=tmp_path,
                 user_id=user_id,
                 doc_type=doc_type,
@@ -235,9 +234,9 @@ async def download_resume(body: ResumeDownloadRequest, user_id: str = Depends(ge
 @app.post("/chat")
 async def chat(body: ChatRequest, user_id: str = Depends(get_current_user)):
     # Get or create session
-    ChatSession = get_chat_session()
+    ChatSessionClass = get_chat_session()
     if user_id not in chat_sessions:
-        chat_sessions[user_id] = ChatSession(user_id)
+        chat_sessions[user_id] = ChatSessionClass(user_id)
 
     session = chat_sessions[user_id]
     result = session.chat(body.message)

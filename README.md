@@ -1,82 +1,81 @@
-# 🤖 ResumeCrew
+# 🚀 ResumeCrew: AI-Powered Career Assistant 🤖
 
-**ResumeCrew** is a full-stack AI-powered job application assistant. It uses a swarm of specialized AI agents to help you land your dream job by automatically generating highly tailored resumes, cover letters, company research, and interview preparation materials based on your real experience.
+[![React Version](https://img.shields.io/badge/react-19-blue.svg)](https://react.dev/)
+[![FastAPI Version](https://img.shields.io/badge/fastapi-0.100+-green.svg)](https://fastapi.tiangolo.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## ✨ Features
+**ResumeCrew** is a state-of-the-art AI agent swarm designed to automate the most painful parts of the job search. By coordinating multiple specialized agents, it transforms your raw experience into a suite of professional, ATS-optimized application materials.
 
-- **ATS Resume Builder**: Tailored, ATS-optimized resume using your real experience matched to the job description keywords.
-- **Cover Letter Writer**: Personalized cover letters referencing company values, news, and your top achievements.
-- **Company Researcher**: Culture, recent news, tech stack, and interview insights generated from live web research.
-- **Interview Coach**: Likely interview questions with strong STAR-format answer frameworks tailored to you.
+---
 
-## 🛠️ Technology Stack
+## 🌟 Key Features
 
-- **Frontend**: React 19 + TypeScript + Vite + TailwindCSS 
-- **Backend**: Python + FastAPI
-- **Authentication**: Supabase (Email/Password Auth)
-- **AI / LLMs**: Groq (Llama-3 models)
-- **Agent Framework**: CrewAI
-- **Vector Database**: Pinecone
-- **Embeddings**: Local HuggingFace Models (`sentence-transformers/all-MiniLM-L6-v2`)
+| Feature | Description |
+| :--- | :--- |
+| **ATS Optimizer** | Matches your CV to job description keywords to ensure you pass through recruiter filters. |
+| **Cover Letter Architect** | Generates uniquely tailored letters that speak directly to company values and goals. |
+| **Company Deep Dive** | Automated research on company culture, recent funding, tech stack, and news. |
+| **Interview Simulator** | Predicted Q&A sessions based on your profile and the specific role. |
+
+---
+
+## 🛠️ The Powerhouse Backend (AI & Agents)
+
+The intelligence of ResumeCrew is powered by a **CrewAI** multi-agent system:
+- **Researcher Agent**: Scours the web for the latest company details.
+- **Analyst Agent**: Deconstructs job descriptions to find critical skill gaps.
+- **Writer Agent**: Polishes and formats your resume into a professional masterpieces.
+
+### Technical Foundation:
+- **Groq & Llama 3**: Lightning-fast LLM inference.
+- **Pinecone**: High-performance vector retrieval (RAG) for your personalized experience database.
+- **FastAPI**: Asynchronous, high-performance API layer.
+
+---
+
+## 💻 Modern UI/UX
+
+Built with **React 19** and **Vite**, the interface offers a sleek, dark-mode first experience with smooth transitions and real-time agent log streaming.
+
+---
 
 ## 🚀 Getting Started
 
-### 1. Prerequisites
+### Prerequisites
 - Node.js (v18+)
 - Python 3.10+
-- Supabase Project (Database & Auth)
-- Pinecone Account (Vector Database)
-- Groq API Key
+- Accounts/Keys for: **Supabase**, **Pinecone**, **Groq**, and **Serper**.
 
-### 2. Backend Setup
+### Installation 
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Create and activate a Python virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/Scripts/activate  # On Windows
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Configure your environment variables in `backend/.env`:
-   ```env
-   GROQ_API_KEY=your_groq_api_key
-   PINECONE_API_KEY=your_pinecone_api_key
-   PINECONE_INDEX=job-agent
-   PINECONE_CLOUD=aws
-   PINECONE_REGION=us-east-1
-   SERPER_API_KEY=your_serper_api_key
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_KEY=your_supabase_anon_key
-   ```
-   *(Note: Ensure your Pinecone index has dimensions set to **384** and metric strictly set to **cosine**)*
+#### 1. Backend Setup
+```bash
+cd backend
+python -m venv venv
+# Activate venv (Windows: venv\Scripts\activate | Unix: source venv/bin/activate)
+pip install -r requirements.txt
+```
+> [!IMPORTANT]
+> Create a `.env` in the `backend/` folder with your keys as shown in the `.env.example`.
 
-5. Start the FastAPI server:
-   ```bash
-   uvicorn main:app --reload
-   ```
-   *(The API runs on `http://localhost:8000`)*
+#### 2. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-### 3. Frontend Setup
+---
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install Node dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development server:
-   ```bash
-   npm run dev
-   ```
-   *(The UI runs on `http://localhost:5173`)*
+## 🔒 Security & Data Isolation
+ResumeCrew uses **Supabase Auth** to ensure your data stays yours. Document embeddings are stored with strict metadata filtering in **Pinecone**, ensuring that one user's resume never informs another user's generation.
 
-## 🔒 Privacy First
-Your data is securely isolated. Because ResumeCrew relies entirely on a localized Vector Search index for your CV, your historical work experience is passed directly (and only) into the generation pipeline when building a tailored resume. No hallucinated experiences, and complete privacy context.
+---
+
+## 🗺️ Roadmap
+- [ ] Multiple Resume Template Support
+- [ ] LinkedIn Profile Optimization Agent
+- [ ] Career Path Recommendation Swarm
+
+---
+*Created for the Hackathon 2026 - Revolutionizing the Job Hunt with AI.*
